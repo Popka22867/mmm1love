@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Практична робота: Планування бюджету заходу</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg: #090d16;
+            --card-bg: #111827;
+            --accent: #38bdf8;
+            --accent-green: #10b981;
+            --accent-yellow: #f59e0b;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: #1f2937;
+            
+            --rgb-c1: #ff0055;
+            --rgb-c2: #00ffcc;
+            --rgb-c3: #7b00ff;
+            --rgb-c4: #ffcc00;
+            --rgb-c5: #0088ff;
+        }
+
+        @keyframes rgbGlow {
+            0% { border-color: var(--rgb-c1); box-shadow: 0 0 20px rgba(255, 0, 85, 0.6); }
+            20% { border-color: var(--rgb-c2); box-shadow: 0 0 20px rgba(0, 255, 204, 0.6); }
+            40% { border-color: var(--rgb-c3); box-shadow: 0 0 20px rgba(123, 0, 255, 0.6); }
+            60% { border-color: var(--rgb-c4); box-shadow: 0 0 20px rgba(255, 204, 0, 0.6); }
+            80% { border-color: var(--rgb-c5); box-shadow: 0 0 20px rgba(0, 136, 255, 0.6); }
+            100% { border-color: var(--rgb-c1); box-shadow: 0 0 20px rgba(255, 0, 85, 0.6); }
+        }
+
+        @keyframes titleRgb {
+            0% { color: var(--rgb-c1); text-shadow: 0 0 20px rgba(255, 0, 85, 0.8); }
+            25% { color: var(--rgb-c2); text-shadow: 0 0 20px rgba(0, 255, 204, 0.8); }
+            50% { color: var(--rgb-c3); text-shadow: 0 0 20px rgba(162, 0, 255, 0.8); }
+            75% { color: var(--rgb-c4); text-shadow: 0 0 20px rgba(255, 204, 0, 0.8); }
+            100% { color: var(--rgb-c1); text-shadow: 0 0 20px rgba(255, 0, 85, 0.8); }
+        }
+
+        @keyframes slowFadeIn {
+            0% { opacity: 0; transform: translateY(-30px) scale(0.95); filter: blur(8px); }
+            100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0px); }
+        }
+
+        @keyframes heartShimmer {
+            0% { filter: hue-rotate(0deg) drop-shadow(0 0 4px var(--rgb-c1)); opacity: 0.8; }
+            50% { filter: hue-rotate(180deg) drop-shadow(0 0 10px var(--rgb-c2)); opacity: 1; }
+            100% { filter: hue-rotate(360deg) drop-shadow(0 0 4px var(--rgb-c1)); opacity: 0.8; }
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background-color: var(--bg);
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            color: var(--text);
+            line-height: 1.5;
+            padding: 12px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        /* Кнопка открытия модального окна настроек */
+        .settings-fab {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--card-bg);
+            border: 2px solid var(--accent);
+            color: var(--accent);
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1.3rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            z-index: 1000;
+            transition: all 0.3s ease;
+            animation: rgbGlow 2s infinite;
+        }
+
+        .settings-fab:hover {
+            transform: scale(1.1) rotate(45deg);
+            background: var(--accent);
+            color: #000;
+        }
+
+        /* Модальное окно настроек */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            padding: 15px;
+        }
+
+        .modal-card {
+            background: var(--card-bg);
+            border: 3px solid var(--accent);
+            border-radius: 16px;
+            padding: 25px;
+            max-width: 450px;
+            width: 100%;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            animation: slowFadeIn 0.3s ease-out;
+        }
+
+        .modal-card h3 {
+            color: var(--accent);
+            margin-bottom: 20px;
+            font-size: 1.4rem;
+            text-align: center;
+        }
+
+        .modal-option {
+            margin-bottom: 15px;
+        }
+
+        .modal-option label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .modal-option select, .modal-option input[type="file"] {
+            width: 100%;
+            background: rgba(0,0,0,0.4);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            cursor: pointer;
+        }
+
+        .close-modal-btn {
+            width: 100%;
+            background: linear-gradient(135deg, var(--rgb-c2), var(--accent));
+            color: #000;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: 0.2s;
+        }
+
+        .close-modal-btn:hover {
+            filter: brightness(1.2);
+        }
+
+        .quick-nav {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .nav-link {
+            background: rgba(56, 189, 248, 0.1);
+            color: var(--accent);
+            border: 1px solid var(--border);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .nav-link:hover {
+            background: var(--accent);
+            color: #000;
+        }
+
+        /* Экран опроса (квиза) */
+        #survey-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 85vh;
+            text-align: center;
+            padding: 10px;
+        }
+
+        .survey-card {
+            background-color: var(--card-bg);
+            border: 3px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.8);
+            animation: rgbGlow 1.5s infinite, slowFadeIn 1.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        .ascii-art {
+            font-family: monospace;
+            white-space: pre;
+            color: var(--rgb-c2);
+            font-size: 0.55rem;
+            line-height: 1;
+            margin-bottom: 15px;
+            animation: titleRgb 3s infinite, slowFadeIn 2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            text-align: center;
+            overflow-x: auto;
+        }
+
+        .survey-card h2 {
+            font-size: 1.8rem;
+            animation: titleRgb 1.2s infinite;
+            margin-bottom: 12px;
+        }
+
+        .survey-card p {
+            color: var(--text-muted);
+            margin-bottom: 20px;
+            font-size: 1rem;
+        }
+
+        .survey-options {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+
+        .survey-btn {
+            background-color: rgba(255, 255, 255, 0.05);
+            color: var(--text);
+            border: 2px solid var(--border);
+            padding: 14px 18px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            text-align: left;
+            animation: rgbGlow 2.5s infinite;
+        }
+
+        .survey-btn:hover {
+            border-color: var(--rgb-c2);
+            background-color: rgba(0, 255, 204, 0.15);
+            transform: scale(1.01);
+        }
+
+        .hearts-container {
+            font-size: 1.4rem;
+            display: inline-block;
+            animation: heartShimmer 1.5s infinite linear;
+            margin-left: 8px;
+        }
+
+        /* Экран ошибки */
+        #error-screen {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 85vh;
+            text-align: center;
+            padding: 10px;
+        }
+
+        .error-card {
+            background-color: #2a0808;
+            border: 3px solid #ff0055;
+            border-radius: 16px;
+            padding: 30px;
+            max-width: 450px;
+            width: 100%;
+            box-shadow: 0 0 30px rgba(255, 0, 85, 0.8);
+            animation: rgbGlow 1s infinite, slowFadeIn 0.6s ease-out;
+        }
+
+        .error-card h2 {
+            color: #ff3366;
+            font-size: 2.2rem;
+            margin-bottom: 12px;
+        }
+
+        .error-card p {
+            color: #ffccd5;
+            font-size: 1.1rem;
+        }
+
+        /* Основной контент */
+        #main-content {
+            display: none;
+            animation: slowFadeIn 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        header {
+            text-align: center;
+            padding: 15px 0 10px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            font-size: 2rem;
+            animation: titleRgb 2s infinite;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            word-break: break-word;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 1rem;
+            padding: 0 10px;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .btn {
+            background-color: var(--card-bg);
+            color: var(--text);
+            border: 2px solid var(--border);
+            padding: 10px 22px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            animation: rgbGlow 2s infinite;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.3);
+        }
+
+        .btn.active {
+            background: linear-gradient(135deg, var(--rgb-c2), var(--accent));
+            color: #000;
+            font-weight: bold;
+            border-color: #fff;
+            box-shadow: 0 0 20px rgba(0, 255, 204, 0.6);
+        }
+
+        .budget-input-container {
+            background: var(--card-bg);
+            border: 2px solid var(--border);
+            padding: 8px 16px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: rgbGlow 3s infinite;
+        }
+
+        .budget-input-container label {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .budget-input-container input {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--border);
+            color: var(--accent-green);
+            padding: 4px 8px;
+            border-radius: 4px;
+            width: 90px;
+            font-weight: bold;
+            font-size: 1rem;
+            text-align: right;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 16px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 950px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 6px 25px rgba(0,0,0,0.4);
+            animation: rgbGlow 3s infinite;
+        }
+
+        .card h2 {
+            font-size: 1.25rem;
+            margin-bottom: 15px;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .table-container {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            min-width: 600px;
+        }
+
+        th, td {
+            padding: 10px 8px;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.9rem;
+            white-space: nowrap;
+        }
+
+        th {
+            background-color: rgba(255, 255, 255, 0.03);
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        tr {
+            transition: background-color 0.2s ease;
+        }
+
+        tr:hover {
+            background-color: rgba(56, 189, 248, 0.05);
+        }
+
+        .total-row {
+            font-weight: bold;
+            background-color: rgba(16, 185, 129, 0.1);
+        }
+
+        .total-row td {
+            color: var(--accent-green);
+            border-top: 2px solid var(--accent-green);
+        }
+
+        .add-item-form {
+            margin-top: 15px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .add-item-form input {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            flex: 1;
+            min-width: 110px;
+        }
+
+        .add-item-form input[type="number"] {
+            max-width: 80px;
+        }
+
+        .add-btn {
+            background: var(--accent-green);
+            color: #000;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+
+        .add-btn:hover {
+            filter: brightness(1.2);
+        }
+
+        .conclusions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 16px;
+            margin-top: 20px;
+        }
+
+        .q-card {
+            background-color: var(--card-bg);
+            border-left: 4px solid var(--rgb-c2);
+            border-radius: 10px;
+            padding: 18px;
+            border-top: 2px solid var(--border);
+            border-right: 2px solid var(--border);
+            border-bottom: 2px solid var(--border);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            animation: rgbGlow 4s infinite;
+            transition: transform 0.3s ease;
+        }
+
+        .q-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .q-card h3 {
+            font-size: 1.05rem;
+            color: var(--accent-yellow);
+            margin-bottom: 10px;
+        }
+
+        .q-card p {
+            color: var(--text-muted);
+            font-size: 0.92rem;
+            line-height: 1.5;
+        }
+
+        .q-card span.highlight {
+            color: var(--text);
+            font-weight: bold;
+        }
+
+        a {
+            color: var(--accent);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        a:hover {
+            color: var(--rgb-c2);
+            text-decoration: underline;
+        }
+
+        .signature {
+            text-align: right;
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            padding: 20px 0 10px;
+            border-top: 1px solid var(--border);
+            margin-top: 25px;
+            letter-spacing: 0.5px;
+        }
+
+        .signature span {
+            color: var(--rgb-c2);
+            font-weight: bold;
+            animation: titleRgb 2s infinite;
+        }
+
+        @media (max-width: 480px) {
+            header h1 {
+                font-size: 1.6rem;
+            }
+            .survey-card {
+                padding: 16px;
+            }
+            .ascii-art {
+                font-size: 0.45rem;
+            }
+            th, td {
+                padding: 8px 6px;
+                font-size: 0.82rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Плавающая кнопка настроек (появляется вместе с сайтом) -->
+<button class="settings-fab" onclick="toggleSettingsModal()" title="Налаштування">⚙️</button>
+
+<!-- Модальное окно настроек -->
+<div class="modal-overlay" id="settings-modal">
+    <div class="modal-card">
+        <h3>⚙️ Налаштування оформлення</h3>
+        
+        <div class="modal-option">
+            <label for="bg-preset">🖼 Вибір фону:</label>
+            <select id="bg-preset" onchange="changeBgPreset(this.value)">
+                <option value="dark">Темний неон (AMOLED)</option>
+                <option value="cyber">Кіберпанк (Фіолетовий)</option>
+                <option value="matrix">Матриця (Темно-зелений)</option>
+                <option value="custom">Своє зображення з файлу...</option>
+            </select>
+            <input type="file" id="custom-bg-file" accept="image/*" style="display:none; margin-top: 8px;" onchange="loadCustomBg(event)">
+        </div>
+
+        <div class="modal-option">
+            <label for="sticker-select">🦇 Стікери (ASCII-арт):</label>
+            <select id="sticker-select" onchange="changeStickers(this.value)">
+                <option value="hearts">Кролик з серцями (☠🦇)</option>
+                <option value="skulls">Готичний череп (💀)</option>
+                <option value="stars">Зірковий настрій (✨)</option>
+                <option value="none">Вимкнути стікери</option>
+            </select>
+        </div>
+
+        <div class="modal-option">
+            <label for="rgb-mode">🌈 Палітра RGB неона:</label>
+            <select id="rgb-mode" onchange="changeRgbPalette(this.value)">
+                <option value="full">Повний RGB (Всі кольори)</option>
+                <option value="primary">Червоний, Синій, Жовтий</option>
+                <option value="neon">Неоновий рожево-блакитний</option>
+                <option value="monochrome">Монохром (Тільки зелений)</option>
+            </select>
+        </div>
+
+        <button class="close-modal-btn" onclick="toggleSettingsModal()">Зберегти та закрити</button>
+    </div>
+</div>
+
+<!-- Экран опроса (квиза) с кроликом ☠🦇 -->
+<div id="survey-screen">
+    <div class="survey-card">
+        <div class="ascii-art" id="sticker-container">
+☠🦇 ࣪ ִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָ
+      ⢠⡾⠲⠶⣤⣀⣠⣤⣤⣤⡿⠛⠿⡴⠾⠛⢻⡆      
+      ⣼⠁⠀⠀⠀⠉⠁⠀⢀⣿⠐⡿⣿⠿⣶⣤⣤⣷⡀      
+      ⢹⡶⠀⠀⠀⠀⠀⠀⠈⢯⣡⣿⣿⣀⣸⣿⣦⢓⡟      
+    ⢀⡿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠉⠹⣍⣭⣾⠁      
+  ⣀⣸⣇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣸⣷⣤⡀
+⠈⠉⠹⣏⡁⠀⢸⣿⠀⠀⠀⢀⡀⠀⠀⠀⣿⠆⠀⢀⣸⣇⣀⠀
+⠀⠐⠋⢻⣅⣄⢀⣀⣀⡀⠀⠯⠽⠂⢀⣀⣀⡀⠀⣤⣿⠀⠉⠀
+⠀⠀⠴⠛⠙⣳⠋⠉⠉⠙⣆⠀⠀⢰⡟⠉⠈⠙⢷⠟⠉⠙⠂⠀
+          ⢻⣄⣠⣤⣴⠟⠛⠛⠛⢧⣤⣤⣀⡾          
+        </div>
+        <h2>💖 Інтерактивна перевірка 💖</h2>
+        <p>Яке ім'я у найкращої вчительки в школі?</p>
+        <div class="survey-options">
+            <button class="survey-btn" onclick="wrongAnswer()">1. Марія Миколаївна</button>
+            <button class="survey-btn" onclick="wrongAnswer()">2. Марія Миколаївна</button>
+            <button class="survey-btn" onclick="correctAnswer()">3. Марія Миколаївна <span class="hearts-container">🫀❤️‍🩹❤️‍🔥</span></button>
+        </div>
+    </div>
+</div>
+
+<!-- Экран ошибки -->
+<div id="error-screen">
+    <div class="error-card">
+        <h2>⚠️ Подумай краще! ⚠️</h2>
+        <p>Це неправильна відповідь! Спробуй ще раз...</p>
+    </div>
+</div>
+
+<!-- Основной контент -->
+<div id="main-content">
+    <div class="container">
+        
+        <!-- Панель быстрой навигации -->
+        <div class="quick-nav">
+            <a href="#table-section" class="nav-link">📊 Кошторис</a>
+            <a href="#chart-section" class="nav-link">🍰 Діаграма</a>
+            <a href="#conclusions-section" class="nav-link">📝 Висновки</a>
+        </div>
+
+        <header>
+            <h1>Планування бюджету шкільного заходу</h1>
+            <p>Інтерактивна практична робота з інформатики в електронних таблицях</p>
+        </header>
+
+        <div class="controls">
+            <button class="btn active" id="btn-10" onclick="switchScenario(10)">Сценарій: 10 призів</button>
+            <button class="btn" id="btn-15" onclick="switchScenario(15)">Сценарій: 15 призів</button>
+            <div class="budget-input-container">
+                <label for="budget-input">Бюджет (₴):</label>
+                <input type="number" id="budget-input" value="3000" oninput="updateBudget(this.value)">
+            </div>
+        </div>
+
+        <div class="grid" id="table-section">
+            <!-- Секція з таблицею -->
+            <div class="card">
+                <h2>📊 Інтерактивний кошторис витрат</h2>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Товар</th>
+                                <th>Кіл-ть</th>
+                                <th>Ціна, ₴</th>
+                                <th>Ціна, $</th>
+                                <th>Посилання</th>
+                                <th>Вартість, ₴</th>
+                                <th>Вартість, $</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body">
+                            <!-- Заповнюється через JS -->
+                        </tbody>
+                        <tfoot>
+                            <tr class="total-row">
+                                <td>Залишок бюджету:</td>
+                                <td colspan="4" id="remainder-val">1 708,10 грн.</td>
+                                <td id="total-uah">1 291,90 грн.</td>
+                                <td id="total-usd">$30,96</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <!-- Форма добавления нового товара -->
+                <div class="add-item-form">
+                    <input type="text" id="new-name" placeholder="Назва товару">
+                    <input type="number" id="new-price" placeholder="Ціна ₴" step="0.1">
+                    <input type="number" id="new-qty" placeholder="Кіл-ть">
+                    <button class="add-btn" onclick="addNewItem()">+ Додати товар</button>
+                </div>
+            </div>
+
+            <!-- Секція з діаграмою -->
+            <div class="card" id="chart-section">
+                <h2>🍰 Розподіл витрат</h2>
+                <div style="position: relative; height: 280px;">
+                    <canvas id="costChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Розділ Висновки -->
+        <h2 id="conclusions-section" style="color: var(--accent); margin-bottom: 15px; font-size: 1.5rem; text-align: center;">📝 Розширені висновки та аналіз практичної роботи</h2>
+        <div class="conclusions-grid">
+            <div class="q-card">
+                <h3>1. Базові фінансові витрати</h3>
+                <p>До внесення будь-яких змін та коригувань до нашого кошторису (при стандартному плані закупівлі рівно на 10 призових нагород для учасників) загальна сума всіх запланованих витрат на проведення шкільного заходу склала рівно <span class="highlight">1 291,90 грн.</span>, що в еквіваленті за встановленим розрахунковим курсом становить <span class="highlight">$30,96</span>[span_0](start_span)[span_0](end_span).</p>
+            </div>
+
+            <div class="q-card">
+                <h3>2. Оцінка залишку після розширення</h3>
+                <p>У разі прийняття організаторами рішення про збільшення призового фонду та закупівлю 15 призових елементів замість початкових 10, загальний обсяг коштів на закупівлю зростає до рівня 1 616,90 грн. При цьому загальний залишок вільних коштів бюджету успішно скорочується до показника <span class="highlight">1 383,10 грн.</span>[span_1](start_span)[span_1](end_span)</p>
+            </div>
+
+            <div class="q-card">
+                <h3>3. Аналіз економії та оптимізації</h3>
+                <p>Детальний аналіз структури витрат показує, що найбільшу частку фінансів займають статті витрат на <span class="highlight">«Призи для конкурсів»</span> та <span class="highlight">«Печиво»</span>. В якості ефективного шляху оптимізації ми запропонували замінити дорогу позицію печива (по 83 грн.) на більш доступний якісний аналог (по 40–50 грн.), що дозволить гарантовано зекономити понад <span class="highlight">150–200 грн.</span> для додаткових потреб[span_2](start_span)[span_2](end_span).</p>
+            </div>
+
+            <div class="q-card">
+                <h3>4. Переваги та роль електронних таблиць</h3>
+                <p>Використання сучасних електронних таблиць та динамічних формул є фундаментально важливим для подібних завдань. Формули забезпечують миттєвий автоматичний перерахунок цін, загальної вартості, конвертації у валюту та залишків коштів у режимі реального часу, повністю усуваючи людські помилки та суттєво заощаджуючи час організаторів[span_3](start_span)[span_3](end_span).</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <div class="signature">
+        <span>Марія Миколаївна найкраща вчителька</span><br>
+        <span style="font-size: 0.85rem; opacity: 0.8;">Ковальчук О.®</span>
+    </div>
+</div>
+
+<script>
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playSound(type) {
+        if (!audioCtx) return;
+        if (audioCtx.state === 'suspended') { audioCtx.resume(); }
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        if (type === 'click') {
+            osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.08);
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.08);
+        } else if (type === 'success') {
+            osc.frequency.setValueAtTime(523.25, audioCtx.currentTime);
+            osc.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.1);
+            osc.frequency.setValueAtTime(783.99, audioCtx.currentTime + 0.2);
+            gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.4);
+        } else if (type === 'error') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(200, audioCtx.currentTime);
+            osc.frequency.linearRampToValueAtTime(100, audioCtx.currentTime + 0.2);
+            gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.2);
+        }
+    }
+
+    function toggleSettingsModal() {
+        playSound('click');
+        const modal = document.getElementById('settings-modal');
+        modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';
+    }
+
+    function changeRgbPalette(mode) {
+        playSound('click');
+        const root = document.documentElement;
+        if (mode === 'full') {
+            root.style.setProperty('--rgb-c1', '#ff0055');
+            root.style.setProperty('--rgb-c2', '#00ffcc');
+            root.style.setProperty('--rgb-c3', '#7b00ff');
+            root.style.setProperty('--rgb-c4', '#ffcc00');
+            root.style.setProperty('--rgb-c5', '#0088ff');
+        } else if (mode === 'primary') {
+            root.style.setProperty('--rgb-c1', '#ff0000');
+            root.style.setProperty('--rgb-c2', '#0000ff');
+            root.style.setProperty('--rgb-c3', '#ffcc00');
+            root.style.setProperty('--rgb-c4', '#ff0000');
+            root.style.setProperty('--rgb-c5', '#0000ff');
+        } else if (mode === 'neon') {
+            root.style.setProperty('--rgb-c1', '#ff007f');
+            root.style.setProperty('--rgb-c2', '#00ffff');
+            root.style.setProperty('--rgb-c3', '#ff007f');
+            root.style.setProperty('--rgb-c4', '#00ffff');
+            root.style.setProperty('--rgb-c5', '#ff007f');
+        } else if (mode === 'monochrome') {
+            root.style.setProperty('--rgb-c1', '#00ff66');
+            root.style.setProperty('--rgb-c2', '#00aa44');
+            root.style.setProperty('--rgb-c3', '#00ff66');
+            root.style.setProperty('--rgb-c4', '#00aa44');
+            root.style.setProperty('--rgb-c5', '#00ff66');
+        }
+    }
+
+    function changeBgPreset(val) {
+        playSound('click');
+        const fileInput = document.getElementById('custom-bg-file');
+        if (val === 'dark') {
+            fileInput.style.display = 'none';
+            document.body.style.backgroundImage = 'none';
+            document.documentElement.style.setProperty('--bg', '#090d16');
+        } else if (val === 'cyber') {
+            fileInput.style.display = 'none';
+            document.body.style.backgroundImage = 'none';
+            document.documentElement.style.setProperty('--bg', '#120524');
+        } else if (val === 'matrix') {
+            fileInput.style.display = 'none';
+            document.body.style.backgroundImage = 'none';
+            document.documentElement.style.setProperty('--bg', '#021508');
+        } else if (val === 'custom') {
+            fileInput.style.display = 'block';
+        }
+    }
+
+    function loadCustomBg(event) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.body.style.backgroundImage = `url('${e.target.result}')`;
+            }
+            reader.readAsDataURL(file);
+        }
+    }
+
+    function changeStickers(val) {
+        playSound('click');
+        const asciiBox = document.getElementById('sticker-container');
+        if (!asciiBox) return;
+
+        if (val === 'hearts') {
+            asciiBox.style.display = 'block';
+            asciiBox.innerHTML = `☠🦇 ࣪ ִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִִֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶֶָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָָ\n      ⢠⡾⠲⠶⣤⣀⣠⣤⣤⣤⡿⠛⠿⡴⠾⠛⢻⡆      \n      ⣼⠁⠀⠀⠀⠉⠁⠀⢀⣿⠐⡿⣿⠿⣶⣤⣤⣷⡀      \n      ⢹⡶⠀⠀⠀⠀⠀⠀⠈⢯⣡⣿⣿⣀⣸⣿⣦⢓⡟      \n    ⢀⡿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠉⠹⣍⣭⣾⠁      \n  ⣀⣸⣇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣸⣷⣤⡀\n⠈⠉⠹⣏⡁⠀⢸⣿⠀⠀⠀⢀⡀⠀⠀⠀⣿⠆⠀⢀⣸⣇⣀⠀\n⠀⠐⠋⢻⣅⣄⢀⣀⣀⡀⠀⠯⠽⠂⢀⣀⣀⡀⠀⣤⣿⠀⠉⠀\n⠀⠀⠴⠛⠙⣳⠋⠉⠉⠙⣆⠀⠀⢰⡟⠉⠈⠙⢷⠟⠉⠙⠂⠀\n          ⢻⣄⣠⣤⣴⠟⠛⠛⠛⢧⣤⣤⣀⡾          `;
+        } else if (val === 'skulls') {
+            asciiBox.style.display = 'block';
+            asciiBox.innerHTML = `💀 𝕯𝖆𝖗𝖐 𝕸𝖆𝖗𝖎𝖆 💀\n        _______\n      /       \\\n     /  #   #  \\\n    |     v     |\n     \\   \\___/ /\n      \\_______/\n     ☠️ 🦇 ☠️`;
+        } else if (val === 'stars') {
+            asciiBox.style.display = 'block';
+            asciiBox.innerHTML = `✨ 🌟 💫 🌟 ✨\n     ╭━━━╮\n     ┃ 🌟 ┃\n     ╰━━━╯\n✨ Зірковий настрій ✨`;
+        } else if (val === 'none') {
+            asciiBox.style.display = 'none';
+        }
+    }
+
+    const itemsData = [
+        { name: "Повітряні кульки", price: 4.01, link: "https://prom.ua", q10: 30, q15: 30 },
+        { name: "Паперові стаканчики", price: 0.78, link: "https://google.com", q10: 40, q15: 40 },
+        { name: "Сік", price: 15.90, link: "https://google.com", q10: 6, q15: 6 },
+        { name: "Печиво", price: 83.00, link: "https://google.com", q10: 4, q15: 4 },
+        { name: "Серветки", price: 9.00, link: "https://google.com", q10: 4, q15: 4 },
+        { name: "Кольоровий папір", price: 9.00, link: "https://google.com", q10: 3, q15: 3 },
+        { name: "Призи для конкурсів", price: 65.00, link: "https://google.com", q10: 10, q15: 15 }
+    ];
+
+    const rate = 41.5;
+    let currentScenario = 10;
+    let customBudget = 3000;
+    let chartInstance = null;
+
+    function wrongAnswer() {
+        playSound('error');
+        document.getElementById('survey-screen').style.display = 'none';
+        document.getElementById('error-screen').style.display = 'flex';
+        setTimeout(() => {
+            window.close();
+            window.location.href = "about:blank";
+        }, 2200);
+    }
+
+    function correctAnswer() {
+        playSound('success');
+        document.getElementById('survey-screen').style.display = 'none';
+        document.getElementById('main-content').style.display = 'block';
+        renderTable(currentScenario);
+    }
+
+    function updateBudget(val) {
+        customBudget = parseFloat(val) || 0;
+        renderTable(currentScenario);
+    }
+
+    function addNewItem() {
+        playSound('click');
+        const nameInput = document.getElementById('new-name');
+        const priceInput = document.getElementById('new-price');
+        const qtyInput = document.getElementById('new-qty');
+
+        const name = nameInput.value.trim();
+        const price = parseFloat(priceInput.value);
+        const qty = parseInt(qtyInput.value);
+
+        if (!name || isNaN(price) || isNaN(qty)) {
+            alert('Будь ласка, заповніть усі поля коректно!');
+            return;
+        }
+
+        itemsData.push({
+            name: name,
+            price: price,
+            link: "https://google.com",
+            q10: qty,
+            q15: qty
+        });
+
+        nameInput.value = '';
+        priceInput.value = '';
+        qtyInput.value = '';
+
+        renderTable(currentScenario);
+    }
+
+    function renderTable(scenario) {
+        currentScenario = scenario;
+        const tbody = document.getElementById('table-body');
+        tbody.innerHTML = '';
+
+        let totalUAH = 0;
+
+        itemsData.forEach(item => {
+            const qty = scenario === 10 ? item.q10 : item.q15;
+            const priceUSD = (item.price / rate).toFixed(2);
+            const costUAH = (item.price * qty);
+            const costUSD = (costUAH / rate).toFixed(2);
+            totalUAH += costUAH;
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><b>${item.name}</b></td>
+                <td>${qty}</td>
+                <td>${item.price.toFixed(2)} ₴</td>
+                <td>$${priceUSD}</td>
+                <td><a href="${item.link}" target="_blank">перейти</a></td>
+                <td>${costUAH.toFixed(2)} ₴</td>
+                <td>$${costUSD}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        const totalUSD = (totalUAH / rate).toFixed(2);
+        const remainder = (customBudget - totalUAH).toFixed(2);
+
+        document.getElementById('total-uah').innerText = totalUAH.toFixed(2) + ' грн.';
+        document.getElementById('total-usd').innerText = '$' + totalUSD;
+        
+        const remainderElement = document.getElementById('remainder-val');
+        remainderElement.innerText = remainder + ' грн.';
+        remainderElement.style.color = remainder < 0 ? '#ff3366' : 'var(--accent-green)';
+
+        updateChart(scenario);
+    }
+
+    function updateChart(scenario) {
+        const data = itemsData.map(i => (scenario === 10 ? i.q10 : i.q15) * i.price);
+        const ctx = document.getElementById('costChart').getContext('2d');
+
+        if (chartInstance) {
+            chartInstance.destroy();
+        }
+
+        chartInstance = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: itemsData.map(i => i.name),
+                datasets: [{
+                    data: data,
+                    backgroundColor: [
+                        '#38bdf8', '#818cf8', '#c084fc', '#f472b6',
+                        '#fb7185', '#34d399', '#f59e0b', '#38ef7d', '#ff0844'
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#111827'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { color: '#f8fafc', font: { size: 10 } }
+                    }
+                }
+            }
+        });
+    }
+
+    function switchScenario(scenario) {
+        playSound('click');
+        document.getElementById('btn-10').classList.toggle('active', scenario === 10);
+        document.getElementById('btn-15').classList.toggle('active', scenario === 15);
+        renderTable(scenario);
+    }
+</script>
+
+</body>
+</html>
+
